@@ -48,9 +48,10 @@ A modern, web-based desktop operating system interface built with React, Tailwin
 ## Release Notes
 
 ### v0.5.2
+- **Tech Stack Overhaul**: Upgraded to **React 19**, **Vite 7**, and **Recharts 3**.
 - **CI/CD**: Added GitHub Actions workflow for automated testing.
 - **Code Quality**: Implemented ESLint and fixed code consistency issues.
-- **Maintenance**: Improved `.gitignore` and project configuration.
+- **Maintenance**: Improved `.gitignore` and dynamic versioning.
 
 [View full version history](HISTORY.md)
 
