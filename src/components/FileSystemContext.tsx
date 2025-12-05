@@ -178,7 +178,7 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  const moveNode = useCallback((fromPath: string, toPath: string): boolean => {
+  const moveNode = useCallback((fromPath: string, _toPath: string): boolean => {
     const node = getNodeAtPath(fromPath);
     if (!node) return false;
 

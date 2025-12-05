@@ -44,7 +44,7 @@ const notifications = [
 ];
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  const { accentColor } = useAppContext();
+  const { accentColor, reduceMotion, disableShadows } = useAppContext();
   const { notificationBackground, blurStyle } = useThemeColors();
 
   return (
@@ -62,12 +62,21 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
 
           {/* Notification Panel */}
           <motion.div
-            className="fixed right-4 top-12 w-96 rounded-2xl shadow-2xl border border-white/20 overflow-hidden z-[10000]"
+            className={`fixed right-4 top-12 w-96 rounded-2xl border border-white/20 overflow-hidden z-[10000]
+              ${!disableShadows ? 'shadow-2xl' : ''}`}
             style={{ background: notificationBackground, ...blurStyle }}
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            initial={{
+              opacity: 0,
+              y: reduceMotion ? 0 : -20,
+              scale: reduceMotion ? 1 : 0.95
+            }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            exit={{
+              opacity: 0,
+              y: reduceMotion ? 0 : -20,
+              scale: reduceMotion ? 1 : 0.95
+            }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
           >
             {/* Header */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between">
@@ -89,9 +98,9 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                 <motion.div
                   key={notification.id}
                   className="p-4 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: reduceMotion ? 0 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: notification.id * 0.05 }}
+                  transition={{ delay: reduceMotion ? 0 : notification.id * 0.05 }}
                 >
                   <div className="flex gap-3">
                     <div className={`flex-shrink-0 ${notification.color}`}>

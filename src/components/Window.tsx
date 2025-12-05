@@ -15,6 +15,7 @@ interface WindowProps {
 }
 
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useAppContext } from './AppContext';
 
 function WindowComponent({
   window,
@@ -29,6 +30,7 @@ function WindowComponent({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
   const { titleBarBackground } = useThemeColors();
+  const { reduceMotion, disableShadows } = useAppContext();
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.window-controls')) return;
@@ -77,9 +79,10 @@ function WindowComponent({
   return (
     <motion.div
       ref={windowRef}
-      className={`absolute rounded-xl shadow-2xl overflow-hidden border border-white/20 ${isDragging ? '' : 'transition-all'
-        } ${!isFocused ? 'brightness-75 saturate-50' : ''
-        }`}
+      className={`absolute rounded-xl overflow-hidden border border-white/20 
+        ${!disableShadows ? 'shadow-2xl' : ''} 
+        ${isDragging ? '' : 'transition-all'} 
+        ${!isFocused ? 'brightness-75 saturate-50' : ''}`}
       style={{
         left: position.x,
         top: position.y,
@@ -89,10 +92,19 @@ function WindowComponent({
         // If not focused, force opaque background to disable transparency
         background: !isFocused ? '#171717' : undefined,
       }}
-      initial={{ scale: 0.95, opacity: 0 }}
+      initial={{
+        scale: reduceMotion ? 1 : 0.95,
+        opacity: reduceMotion ? 1 : 0
+      }}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.95, opacity: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      exit={{
+        scale: reduceMotion ? 1 : 0.95,
+        opacity: reduceMotion ? 1 : 0
+      }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.15,
+        ease: "easeOut"
+      }}
       onMouseDown={onFocus}
     >
 

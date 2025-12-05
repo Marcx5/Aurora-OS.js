@@ -24,9 +24,11 @@ const dockApps = [
 ];
 
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useAppContext } from './AppContext';
 
 function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: DockProps) {
   const { dockBackground, blurStyle } = useThemeColors();
+  const { reduceMotion, disableShadows } = useAppContext();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [shouldHide, setShouldHide] = useState(false);
 
@@ -126,7 +128,7 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[9998]">
       <motion.div
-        className="rounded-2xl p-2 border border-white/20 shadow-2xl"
+        className={`rounded-2xl p-2 border border-white/20 ${!disableShadows ? 'shadow-2xl' : ''}`}
         style={{ background: dockBackground, ...blurStyle }}
         initial={{ x: -100, opacity: 0 }}
         animate={{
@@ -145,12 +147,13 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
             return (
               <motion.button
                 key={app.id}
-                className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all`}
+                className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center text-white 
+                  ${!disableShadows ? 'shadow-lg hover:shadow-xl' : ''} transition-all`}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
                 onClick={(e) => handleAppClick(app.id, e)}
-                whileHover={{ scale: 1.1, x: 8 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={reduceMotion ? { scale: 1, x: 0 } : { scale: 1.1, x: 8 }}
+                whileTap={reduceMotion ? { scale: 1 } : { scale: 0.95 }}
               >
                 <app.icon className="w-6 h-6" />
 

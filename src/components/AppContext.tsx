@@ -9,6 +9,10 @@ interface AppContextType {
   setThemeMode: (mode: ThemeMode) => void;
   blurEnabled: boolean;
   setBlurEnabled: (enabled: boolean) => void;
+  reduceMotion: boolean;
+  setReduceMotion: (enabled: boolean) => void;
+  disableShadows: boolean;
+  setDisableShadows: (enabled: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -17,6 +21,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [accentColor, setAccentColor] = useState('#3b82f6'); // Default blue
   const [themeMode, setThemeMode] = useState<ThemeMode>('neutral'); // Default neutral
   const [blurEnabled, setBlurEnabled] = useState(true); // Default blur enabled
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [disableShadows, setDisableShadows] = useState(false);
 
   // Sync accent color to CSS variable for global theming
   useEffect(() => {
@@ -29,7 +35,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [blurEnabled]);
 
   return (
-    <AppContext.Provider value={{ accentColor, setAccentColor, themeMode, setThemeMode, blurEnabled, setBlurEnabled }}>
+    <AppContext.Provider value={{
+      accentColor,
+      setAccentColor,
+      themeMode,
+      setThemeMode,
+      blurEnabled,
+      setBlurEnabled,
+      reduceMotion,
+      setReduceMotion,
+      disableShadows,
+      setDisableShadows
+    }}>
       {children}
     </AppContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { Palette, Monitor, Bell, Shield, Wifi, User, HardDrive } from 'lucide-react';
+import { Palette, Monitor, Bell, Shield, Wifi, User, HardDrive, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { useAppContext } from './AppContext';
 import { Checkbox } from './ui/checkbox';
@@ -10,6 +10,7 @@ const settingsSidebar = {
       title: 'System',
       items: [
         { id: 'appearance', label: 'Appearance', icon: Palette },
+        { id: 'performance', label: 'Performance', icon: Zap },
         { id: 'displays', label: 'Displays', icon: Monitor },
         { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'network', label: 'Network', icon: Wifi },
@@ -34,7 +35,18 @@ const presetColors = [
 
 export function Settings() {
   const [activeSection, setActiveSection] = useState('appearance');
-  const { accentColor, setAccentColor, themeMode, setThemeMode, blurEnabled, setBlurEnabled } = useAppContext();
+  const {
+    accentColor,
+    setAccentColor,
+    themeMode,
+    setThemeMode,
+    blurEnabled,
+    setBlurEnabled,
+    reduceMotion,
+    setReduceMotion,
+    disableShadows,
+    setDisableShadows
+  } = useAppContext();
   const [customColor, setCustomColor] = useState(accentColor);
 
   const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,6 +200,29 @@ export function Settings() {
             </div>
           </div>
 
+
+
+          {/* Theme Section */}
+          <div className="bg-black/20 rounded-xl p-6 border border-white/5">
+            <h3 className="text-lg text-white mb-4">Theme</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button className="p-4 rounded-lg bg-gray-900/50 border-2 border-white/20 hover:border-white/40 transition-all">
+                <div className="w-full h-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded mb-3" />
+                <span className="text-white text-sm">Dark</span>
+              </button>
+              <button className="p-4 rounded-lg bg-black/20 border border-white/10 hover:border-white/20 transition-all opacity-50 cursor-not-allowed">
+                <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-300 rounded mb-3" />
+                <span className="text-white/60 text-sm">Light (Coming Soon)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'performance' && (
+        <div>
+          <h2 className="text-2xl text-white mb-6">Performance</h2>
+
           {/* Blur & Transparency Toggle */}
           <div className="bg-black/20 rounded-xl p-6 mb-6 border border-white/5">
             <div className="flex items-center justify-between">
@@ -204,18 +239,35 @@ export function Settings() {
             </div>
           </div>
 
-          {/* Theme Section */}
+          {/* Reduce Motion Toggle */}
+          <div className="bg-black/20 rounded-xl p-6 mb-6 border border-white/5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg text-white mb-1">Reduce Motion</h3>
+                <p className="text-sm text-white/60">
+                  Disable animations for faster response and accessibility
+                </p>
+              </div>
+              <Checkbox
+                checked={reduceMotion}
+                onCheckedChange={(checked) => setReduceMotion(checked === true)}
+              />
+            </div>
+          </div>
+
+          {/* Disable Shadows Toggle */}
           <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-            <h3 className="text-lg text-white mb-4">Theme</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="p-4 rounded-lg bg-gray-900/50 border-2 border-white/20 hover:border-white/40 transition-all">
-                <div className="w-full h-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded mb-3" />
-                <span className="text-white text-sm">Dark</span>
-              </button>
-              <button className="p-4 rounded-lg bg-black/20 border border-white/10 hover:border-white/20 transition-all opacity-50 cursor-not-allowed">
-                <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-300 rounded mb-3" />
-                <span className="text-white/60 text-sm">Light (Coming Soon)</span>
-              </button>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg text-white mb-1">Disable Shadows</h3>
+                <p className="text-sm text-white/60">
+                  Remove window shadows to improve rendering performance
+                </p>
+              </div>
+              <Checkbox
+                checked={disableShadows}
+                onCheckedChange={(checked) => setDisableShadows(checked === true)}
+              />
             </div>
           </div>
         </div>

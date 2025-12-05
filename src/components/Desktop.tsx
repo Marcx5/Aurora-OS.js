@@ -1,5 +1,4 @@
-import { FolderOpen } from 'lucide-react';
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import type { DesktopIcon } from '../App';
 import { useAppContext } from './AppContext';
 import { lightenColor } from '../utils/colors';
@@ -12,7 +11,7 @@ interface DesktopProps {
 }
 
 function DesktopComponent({ onDoubleClick, icons, onUpdateIconPosition, onIconDoubleClick }: DesktopProps) {
-  const { accentColor } = useAppContext();
+  const { accentColor, reduceMotion, disableShadows } = useAppContext();
   const [draggingIcon, setDraggingIcon] = useState<string | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -89,8 +88,9 @@ function DesktopComponent({ onDoubleClick, icons, onUpdateIconPosition, onIconDo
       {icons.map((icon) => (
         <div
           key={icon.id}
-          className={`absolute flex flex-col items-center gap-1 p-3 rounded-lg cursor-pointer select-none transition-colors ${selectedIcon === icon.id ? 'bg-white/10 backdrop-blur-sm' : 'hover:bg-white/5'
-            }`}
+          className={`absolute flex flex-col items-center gap-1 p-3 rounded-lg cursor-pointer select-none 
+            ${!reduceMotion ? 'transition-colors' : ''} 
+            ${selectedIcon === icon.id ? 'bg-white/10 backdrop-blur-sm' : 'hover:bg-white/5'}`}
           style={{
             left: icon.position.x,
             top: icon.position.y,
@@ -101,7 +101,8 @@ function DesktopComponent({ onDoubleClick, icons, onUpdateIconPosition, onIconDo
         >
           <div className="relative w-16 h-16">
             {/* macOS-style folder icon */}
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"
+              className={!disableShadows ? 'drop-shadow-lg' : ''}>
               <path
                 d="M8 14C8 11.7909 9.79086 10 12 10H24L28 16H52C54.2091 16 56 17.7909 56 20V50C56 52.2091 54.2091 54 52 54H12C9.79086 54 8 52.2091 8 50V14Z"
                 fill={`url(#folder-gradient-${icon.id})`}
@@ -114,7 +115,8 @@ function DesktopComponent({ onDoubleClick, icons, onUpdateIconPosition, onIconDo
               </defs>
             </svg>
           </div>
-          <span className="text-xs text-white text-center drop-shadow-lg px-2 py-1 bg-black/20 rounded backdrop-blur-sm">
+          <span className={`text-xs text-white text-center px-2 py-1 bg-black/20 rounded backdrop-blur-sm 
+            ${!disableShadows ? 'drop-shadow-lg' : ''}`}>
             {icon.name}
           </span>
         </div>
