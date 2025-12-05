@@ -18,7 +18,20 @@ export function Terminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
 
-  const { currentPath, setCurrentPath, listDirectory, getNodeAtPath, createFile, createDirectory, deleteNode, readFile } = useFileSystem();
+  const {
+    listDirectory,
+    getNodeAtPath,
+    createFile,
+    createDirectory,
+    deleteNode,
+    readFile,
+    resolvePath: contextResolvePath,
+    homePath,
+    currentUser
+  } = useFileSystem();
+
+  // Each Terminal instance has its own working directory (independent windows)
+  const [currentPath, setCurrentPath] = useState(homePath);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -26,12 +39,13 @@ export function Terminal() {
     }
   }, [history]);
 
+  // Use context's resolvePath but with our local currentPath
   const resolvePath = (path: string): string => {
-    if (path.startsWith('/')) return path;
-    if (path === '~') return '/Users/guest';
-    if (path.startsWith('~/')) return '/Users/guest' + path.slice(1);
+    if (path.startsWith('/')) return contextResolvePath(path);
+    if (path === '~') return homePath;
+    if (path.startsWith('~/')) return homePath + path.slice(1);
 
-    // Handle relative paths
+    // Handle relative paths from our local currentPath
     const parts = currentPath.split('/').filter(p => p);
     const pathParts = path.split('/');
 
@@ -72,6 +86,8 @@ export function Terminal() {
           '  touch <name>      - Create file',
           '  rm <name>         - Remove file or directory',
           '  echo <text>       - Display text',
+          '  whoami            - Print current user',
+          '  hostname          - Print system hostname',
           '  clear             - Clear terminal',
           '  help              - Show this help message',
           ''
@@ -80,15 +96,31 @@ export function Terminal() {
 
       case 'ls': {
         const lsPath = args[0] ? resolvePath(args[0]) : currentPath;
+        const showHidden = args.includes('-a') || args.includes('-la') || args.includes('-al');
+        const longFormat = args.includes('-l') || args.includes('-la') || args.includes('-al');
         const contents = listDirectory(lsPath);
         if (contents) {
-          output = contents.length > 0
-            ? contents.map(node => {
+          let filteredContents = contents;
+          if (!showHidden) {
+            filteredContents = contents.filter(node => !node.name.startsWith('.'));
+          }
+          if (filteredContents.length === 0) {
+            output = ['(empty directory)'];
+          } else if (longFormat) {
+            output = filteredContents.map(node => {
+              const perms = node.permissions || (node.type === 'directory' ? 'drwxr-xr-x' : '-rw-r--r--');
+              const owner = node.owner || currentUser;
+              const size = node.size?.toString().padStart(6) || '     0';
+              const name = node.type === 'directory' ? `\x1b[34m${node.name}\x1b[0m` : node.name;
+              return `${perms}  ${owner}  ${size}  ${name}`;
+            });
+          } else {
+            output = filteredContents.map(node => {
               const icon = node.type === 'directory' ? '📁' : '📄';
               const name = node.type === 'directory' ? node.name + '/' : node.name;
               return `${icon} ${name}`;
-            })
-            : ['(empty directory)'];
+            });
+          }
         } else {
           output = [`ls: ${lsPath}: No such file or directory`];
           error = true;
@@ -97,8 +129,8 @@ export function Terminal() {
       }
 
       case 'cd': {
-        if (args.length === 0) {
-          setCurrentPath('/Users/guest');
+        if (args.length === 0 || args[0] === '~') {
+          setCurrentPath(homePath);
           output = [];
         } else {
           const newPath = resolvePath(args[0]);
@@ -116,6 +148,14 @@ export function Terminal() {
 
       case 'pwd':
         output = [currentPath];
+        break;
+
+      case 'whoami':
+        output = [currentUser];
+        break;
+
+      case 'hostname':
+        output = ['aurora'];
         break;
 
       case 'cat': {
@@ -233,19 +273,24 @@ export function Terminal() {
   };
 
   const getPrompt = () => {
-    const pathArray = currentPath.split('/');
-    const shortPath = pathArray.length > 2
-      ? pathArray[pathArray.length - 1]
-      : pathArray.filter(p => p).join('/');
+    // Show path relative to home, or absolute if outside home
+    let displayPath: string;
+    if (currentPath === homePath) {
+      displayPath = '~';
+    } else if (currentPath.startsWith(homePath + '/')) {
+      displayPath = '~' + currentPath.slice(homePath.length);
+    } else {
+      displayPath = currentPath;
+    }
 
     return (
       <span>
-        <span style={{ color: accentColor }}>guest</span>
+        <span style={{ color: accentColor }}>{currentUser}</span>
         <span style={{ color: '#94a3b8' }}>@</span>
-        <span style={{ color: accentColor }}>desktop</span>
-        <span style={{ color: '#94a3b8' }}>:~/</span>
-        <span style={{ color: '#60a5fa' }}>{shortPath}</span>
-        <span style={{ color: accentColor }}>$</span>
+        <span style={{ color: accentColor }}>aurora</span>
+        <span style={{ color: '#94a3b8' }}>:</span>
+        <span style={{ color: '#60a5fa' }}>{displayPath}</span>
+        <span style={{ color: accentColor }}>{currentUser === 'root' ? '#' : '$'}</span>
       </span>
     );
   };

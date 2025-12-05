@@ -1,5 +1,18 @@
 # Version History
 
+## v0.6.0
+- **Virtual Filesystem**: Linux-inspired filesystem with `/bin`, `/etc`, `/home`, `/var`, and more.
+- **Terminal Integration**: Full command-line interface (`ls`, `cd`, `cat`, `mkdir`, `rm`, `whoami`, `hostname`) connected to virtual filesystem.
+- **Persistence Layer**: Settings, desktop icons, filesystem, and app states saved to localStorage.
+- **App Storage Hook**: New `useAppStorage` hook enabling all apps to persist their state.
+- **Window Improvements**: State preservation on minimize/restore, smooth dock-directed animations, auto-focus on next window.
+- **Independent Windows**: Multiple Finder/Terminal windows now have independent navigation state.
+
+## v0.5.2
+- **Tech Stack Overhaul**: Upgraded to React 19, Vite 7, and Recharts 3.
+- **CI/CD**: Added GitHub Actions workflow for automated testing.
+- **Code Quality**: Implemented ESLint and fixed code consistency issues.
+
 ## v0.5.1
 - **Native App Support**: Packaged with Electron for Windows.
 - **Window Frame Option**: Added `--frame` flag / `WINDOW_FRAME` env var for native window management.
@@ -12,3 +25,4 @@
 - Fixed visual inconsistencies in Switch component.
 - Improved window management and dock behavior.
 - Refactored multiple apps for consistency.
+

@@ -2,6 +2,7 @@ import { AppTemplate } from './AppTemplate';
 import { MessageSquare, Users, Archive, Star, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useAppContext } from '../AppContext';
+import { useAppStorage } from '../../hooks/useAppStorage';
 
 const messagesSidebar = {
   sections: [
@@ -34,6 +35,11 @@ const mockMessages = [
 ];
 
 export function Messages() {
+  // Persisted state
+  const [appState, setAppState] = useAppStorage('messages', {
+    activeCategory: 'all',
+  });
+
   const [selectedConversationId, setSelectedConversationId] = useState<string | number>(mockConversations[0].id);
   const [messageText, setMessageText] = useState('');
   const { accentColor } = useAppContext();
@@ -139,15 +145,13 @@ export function Messages() {
     </div>
   );
 
-  const [activeCategory, setActiveCategory] = useState('all');
-
   return (
     <AppTemplate
       sidebar={messagesSidebar}
       content={content}
       hasSidebar={true}
-      activeItem={activeCategory}
-      onItemClick={setActiveCategory}
+      activeItem={appState.activeCategory}
+      onItemClick={(id) => setAppState(s => ({ ...s, activeCategory: id }))}
     />
   );
 }

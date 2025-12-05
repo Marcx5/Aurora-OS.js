@@ -17,12 +17,58 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const SETTINGS_STORAGE_KEY = 'aurora-os-settings';
+
+interface StoredSettings {
+  accentColor: string;
+  themeMode: ThemeMode;
+  blurEnabled: boolean;
+  reduceMotion: boolean;
+  disableShadows: boolean;
+}
+
+function loadSettings(): StoredSettings {
+  try {
+    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load settings:', e);
+  }
+  // Default settings
+  return {
+    accentColor: '#3b82f6',
+    themeMode: 'neutral',
+    blurEnabled: true,
+    reduceMotion: false,
+    disableShadows: false,
+  };
+}
+
+function saveSettings(settings: StoredSettings) {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.warn('Failed to save settings:', e);
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [accentColor, setAccentColor] = useState('#3b82f6'); // Default blue
-  const [themeMode, setThemeMode] = useState<ThemeMode>('neutral'); // Default neutral
-  const [blurEnabled, setBlurEnabled] = useState(true); // Default blur enabled
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [disableShadows, setDisableShadows] = useState(false);
+  const [settings, setSettings] = useState<StoredSettings>(() => loadSettings());
+
+  const { accentColor, themeMode, blurEnabled, reduceMotion, disableShadows } = settings;
+
+  // Save settings whenever they change
+  useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
+
+  const setAccentColor = (color: string) => setSettings(s => ({ ...s, accentColor: color }));
+  const setThemeMode = (mode: ThemeMode) => setSettings(s => ({ ...s, themeMode: mode }));
+  const setBlurEnabled = (enabled: boolean) => setSettings(s => ({ ...s, blurEnabled: enabled }));
+  const setReduceMotion = (enabled: boolean) => setSettings(s => ({ ...s, reduceMotion: enabled }));
+  const setDisableShadows = (enabled: boolean) => setSettings(s => ({ ...s, disableShadows: enabled }));
 
   // Sync accent color to CSS variable for global theming
   useEffect(() => {
@@ -59,3 +105,4 @@ export function useAppContext() {
   }
   return context;
 }
+

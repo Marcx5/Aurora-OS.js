@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Desktop } from './components/Desktop';
 import { MenuBar } from './components/MenuBar';
 import { Dock } from './components/Dock';
@@ -34,16 +34,48 @@ export interface DesktopIcon {
   position: { x: number; y: number };
 }
 
+const DESKTOP_ICONS_STORAGE_KEY = 'aurora-os-desktop-icons';
+
+const defaultDesktopIcons: DesktopIcon[] = [
+  { id: '1', name: 'Documents', type: 'folder', position: { x: 100, y: 80 } },
+  { id: '2', name: 'Downloads', type: 'folder', position: { x: 100, y: 200 } },
+  { id: '3', name: 'Pictures', type: 'folder', position: { x: 100, y: 320 } },
+  { id: '4', name: 'Music', type: 'folder', position: { x: 100, y: 440 } },
+];
+
+function loadDesktopIcons(): DesktopIcon[] {
+  try {
+    const stored = localStorage.getItem(DESKTOP_ICONS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load desktop icons:', e);
+  }
+  return defaultDesktopIcons;
+}
+
+function saveDesktopIcons(icons: DesktopIcon[]) {
+  try {
+    localStorage.setItem(DESKTOP_ICONS_STORAGE_KEY, JSON.stringify(icons));
+  } catch (e) {
+    console.warn('Failed to save desktop icons:', e);
+  }
+}
+
 export default function App() {
+  // Windows reset on refresh (not persisted)
   const [windows, setWindows] = useState<WindowState[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [topZIndex, setTopZIndex] = useState(100);
-  const [desktopIcons, setDesktopIcons] = useState<DesktopIcon[]>([
-    { id: '1', name: 'Documents', type: 'folder', position: { x: 100, y: 80 } },
-    { id: '2', name: 'Downloads', type: 'folder', position: { x: 100, y: 200 } },
-    { id: '3', name: 'Pictures', type: 'folder', position: { x: 100, y: 320 } },
-    { id: '4', name: 'Music', type: 'folder', position: { x: 100, y: 440 } },
-  ]);
+
+  // Desktop icons are persisted
+  const [desktopIcons, setDesktopIcons] = useState<DesktopIcon[]>(() => loadDesktopIcons());
+
+  // Save desktop icons whenever they change
+  useEffect(() => {
+    saveDesktopIcons(desktopIcons);
+  }, [desktopIcons]);
 
   const openWindow = useCallback((type: string) => {
     let content: React.ReactNode;
@@ -105,10 +137,28 @@ export default function App() {
   }, []);
 
   const minimizeWindow = useCallback((id: string) => {
-    setWindows(prevWindows => prevWindows.map(w =>
-      w.id === id ? { ...w, isMinimized: true } : w
-    ));
-  }, []);
+    setWindows(prevWindows => {
+      const updated = prevWindows.map(w =>
+        w.id === id ? { ...w, isMinimized: true } : w
+      );
+
+      // Find the next visible window with highest zIndex to focus
+      const visibleWindows = updated.filter(w => !w.isMinimized);
+      if (visibleWindows.length > 0) {
+        const topWindow = visibleWindows.reduce((max, w) =>
+          w.zIndex > max.zIndex ? w : max, visibleWindows[0]
+        );
+        // Bump its zIndex to make it focused
+        const newZIndex = topZIndex + 1;
+        setTopZIndex(newZIndex);
+        return updated.map(w =>
+          w.id === topWindow.id ? { ...w, zIndex: newZIndex } : w
+        );
+      }
+
+      return updated;
+    });
+  }, [topZIndex]);
 
   const maximizeWindow = useCallback((id: string) => {
     setWindows(prevWindows => prevWindows.map(w =>
@@ -184,19 +234,16 @@ export default function App() {
           />
 
           {windows.map(window => (
-            !window.isMinimized && (
-              <Window
-                key={window.id}
-                window={window}
-                onClose={() => closeWindow(window.id)}
-                onMinimize={() => minimizeWindow(window.id)}
-                onMaximize={() => maximizeWindow(window.id)}
-                onFocus={() => focusWindow(window.id)}
-                onUpdatePosition={(pos) => updateWindowPosition(window.id, pos)}
-
-                isFocused={window.id === focusedWindowId}
-              />
-            )
+            <Window
+              key={window.id}
+              window={window}
+              onClose={() => closeWindow(window.id)}
+              onMinimize={() => minimizeWindow(window.id)}
+              onMaximize={() => maximizeWindow(window.id)}
+              onFocus={() => focusWindow(window.id)}
+              onUpdatePosition={(pos) => updateWindowPosition(window.id, pos)}
+              isFocused={window.id === focusedWindowId}
+            />
           ))}
 
           <NotificationCenter

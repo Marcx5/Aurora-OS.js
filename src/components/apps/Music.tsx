@@ -3,6 +3,7 @@ import { Heart, Clock, Disc, PlayCircle, User, List, Music2, Play, Pause, SkipBa
 import { useState } from 'react';
 import { useAppContext } from '../AppContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useAppStorage } from '../../hooks/useAppStorage';
 
 const musicSidebar = {
   sections: [
@@ -35,6 +36,12 @@ const mockSongs = [
 ];
 
 export function Music() {
+  // Persisted state
+  const [appState, setAppState] = useAppStorage('music', {
+    activeCategory: 'songs',
+    volume: 75,
+  });
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSong, setCurrentSong] = useState(mockSongs[0]);
   const { accentColor } = useAppContext();
@@ -118,7 +125,8 @@ export function Music() {
             type="range"
             min="0"
             max="100"
-            defaultValue="75"
+            value={appState.volume}
+            onChange={(e) => setAppState(s => ({ ...s, volume: parseInt(e.target.value) }))}
             className="w-24"
           />
         </div>
@@ -126,15 +134,13 @@ export function Music() {
     </div>
   );
 
-  const [activeCategory, setActiveCategory] = useState('songs');
-
   return (
     <AppTemplate
       sidebar={musicSidebar}
       toolbar={toolbar}
       content={content}
-      activeItem={activeCategory}
-      onItemClick={setActiveCategory}
+      activeItem={appState.activeCategory}
+      onItemClick={(id) => setAppState(s => ({ ...s, activeCategory: id }))}
     />
   );
 }

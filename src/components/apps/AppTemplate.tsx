@@ -13,6 +13,7 @@ interface AppTemplateProps {
         label: string;
         icon: LucideIcon;
         badge?: string;
+        action?: () => void;
       }[];
     }[];
   };
@@ -72,7 +73,7 @@ export function AppTemplate({
                   {section.items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => onItemClick?.(item.id)}
+                      onClick={() => item.action ? item.action() : onItemClick?.(item.id)}
                       className={cn(
                         "w-full flex items-center gap-2.5 px-2.5 py-1.5 text-sm rounded-md transition-colors group",
                         activeItem === item.id

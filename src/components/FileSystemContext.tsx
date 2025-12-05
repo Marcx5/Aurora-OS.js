@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 
 export interface FileNode {
   name: string;
@@ -6,6 +6,8 @@ export interface FileNode {
   content?: string;
   children?: FileNode[];
   permissions?: string;
+  owner?: string;
+  group?: string;
   size?: number;
   modified?: Date;
 }
@@ -17,6 +19,8 @@ function deepCloneFileNode(node: FileNode): FileNode {
     type: node.type,
     content: node.content,
     permissions: node.permissions,
+    owner: node.owner,
+    group: node.group,
     size: node.size,
     modified: node.modified ? new Date(node.modified) : undefined,
   };
@@ -33,9 +37,31 @@ function deepCloneFileSystem(root: FileNode): FileNode {
   return deepCloneFileNode(root);
 }
 
+// Helper to create a user home directory structure (macOS-inspired)
+function createUserHome(username: string): FileNode {
+  return {
+    name: username,
+    type: 'directory',
+    owner: username,
+    permissions: 'drwxr-x---',
+    children: [
+      { name: 'Desktop', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Documents', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Downloads', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Pictures', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Music', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Videos', type: 'directory', children: [], owner: username, permissions: 'drwxr-xr-x' },
+      { name: 'Config', type: 'directory', children: [], owner: username, permissions: 'drwxr-x---' },
+      { name: '.Trash', type: 'directory', children: [], owner: username, permissions: 'drwx------' },
+    ],
+  };
+}
+
 interface FileSystemContextType {
   fileSystem: FileNode;
   currentPath: string;
+  currentUser: string;
+  homePath: string;
   setCurrentPath: (path: string) => void;
   getNodeAtPath: (path: string) => FileNode | null;
   createFile: (path: string, name: string, content?: string) => boolean;
@@ -45,73 +71,245 @@ interface FileSystemContextType {
   readFile: (path: string) => string | null;
   listDirectory: (path: string) => FileNode[] | null;
   moveNode: (fromPath: string, toPath: string) => boolean;
+  resolvePath: (path: string) => string;
+  resetFileSystem: () => void;
 }
 
+const STORAGE_KEY = 'aurora-filesystem';
+
+// Grey Hack / Linux inspired file system hierarchy
 const initialFileSystem: FileNode = {
   name: '/',
   type: 'directory',
+  permissions: 'drwxr-xr-x',
+  owner: 'root',
   children: [
+    // Essential command binaries
     {
-      name: 'Users',
+      name: 'bin',
       type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        { name: 'ls', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# list directory contents' },
+        { name: 'cat', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# concatenate files' },
+        { name: 'cd', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# change directory' },
+        { name: 'pwd', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# print working directory' },
+        { name: 'mkdir', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# make directories' },
+        { name: 'rm', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# remove files or directories' },
+        { name: 'cp', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# copy files' },
+        { name: 'mv', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# move files' },
+        { name: 'touch', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# create empty file' },
+        { name: 'echo', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# display a line of text' },
+        { name: 'clear', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# clear terminal screen' },
+        { name: 'whoami', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# print effective userid' },
+      ],
+    },
+    // Boot loader files
+    {
+      name: 'boot',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        { name: 'kernel', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'Aurora OS Kernel v0.5.2' },
+        { name: 'initrd', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'Initial ramdisk' },
+      ],
+    },
+    // System configuration files
+    {
+      name: 'etc',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        { name: 'passwd', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash\nguest:x:1001:1001:Guest:/home/guest:/bin/bash' },
+        { name: 'group', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'root:x:0:\nusers:x:100:user,guest\nadmin:x:10:user' },
+        { name: 'hostname', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'aurora' },
+        { name: 'hosts', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: '127.0.0.1\tlocalhost\n::1\t\tlocalhost' },
+        { name: 'os-release', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: 'NAME="Aurora OS"\nVERSION="0.5.2"\nID=aurora\nPRETTY_NAME="Aurora OS.js"' },
+        {
+          name: 'apt',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
+            { name: 'sources.list', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: '# Aurora package sources\ndeb https://packages.aurora.os/stable main' },
+          ],
+        },
+      ],
+    },
+    // User home directories
+    {
+      name: 'home',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
       children: [
         {
-          name: 'guest',
-          type: 'directory',
+          ...createUserHome('user'),
           children: [
+            { name: 'Desktop', type: 'directory', children: [], owner: 'user', permissions: 'drwxr-xr-x' },
             {
               name: 'Documents',
               type: 'directory',
+              owner: 'user',
+              permissions: 'drwxr-xr-x',
               children: [
-                { name: 'README.txt', type: 'file', content: 'Welcome to the Desktop OS!\n\nThis is a fully functional desktop environment.', size: 72 },
-                { name: 'Projects', type: 'directory', children: [] },
+                { name: 'README.txt', type: 'file', content: 'Welcome to Aurora OS!\n\nThis is your personal documents folder.', size: 60, owner: 'user', permissions: '-rw-r--r--' },
+                { name: 'Notes', type: 'directory', children: [], owner: 'user', permissions: 'drwxr-xr-x' },
               ],
             },
             {
               name: 'Downloads',
               type: 'directory',
+              owner: 'user',
+              permissions: 'drwxr-xr-x',
               children: [
-                { name: 'example.pdf', type: 'file', content: 'Mock PDF content', size: 1024 },
+                { name: 'sample.pdf', type: 'file', content: '[PDF content placeholder]', size: 1024, owner: 'user', permissions: '-rw-r--r--' },
               ],
             },
+            { name: 'Pictures', type: 'directory', children: [{ name: 'Screenshots', type: 'directory', children: [], owner: 'user' }], owner: 'user', permissions: 'drwxr-xr-x' },
+            { name: 'Music', type: 'directory', children: [], owner: 'user', permissions: 'drwxr-xr-x' },
+            { name: 'Videos', type: 'directory', children: [], owner: 'user', permissions: 'drwxr-xr-x' },
+            { name: 'Config', type: 'directory', children: [], owner: 'user', permissions: 'drwxr-x---' },
+            { name: '.Trash', type: 'directory', children: [], owner: 'user', permissions: 'drwx------' },
+          ],
+        },
+        createUserHome('guest'),
+      ],
+    },
+    // Essential shared libraries
+    {
+      name: 'lib',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        { name: 'libc.so', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '# C standard library' },
+        { name: 'libm.so', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '# Math library' },
+      ],
+    },
+    // Root user home directory
+    {
+      name: 'root',
+      type: 'directory',
+      permissions: 'drwx------',
+      owner: 'root',
+      children: [
+        { name: 'Desktop', type: 'directory', children: [], owner: 'root', permissions: 'drwxr-xr-x' },
+        { name: 'Downloads', type: 'directory', children: [], owner: 'root', permissions: 'drwxr-xr-x' },
+        { name: 'Config', type: 'directory', children: [], owner: 'root', permissions: 'drwx------' },
+        { name: '.Trash', type: 'directory', children: [], owner: 'root', permissions: 'drwx------' },
+        { name: '.bashrc', type: 'file', content: '# Root bash configuration\nexport PS1="root@aurora# "', owner: 'root', permissions: '-rw-------' },
+      ],
+    },
+    // Kernel and system files
+    {
+      name: 'sys',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        {
+          name: 'kernel',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
+            { name: 'version', type: 'file', permissions: '-r--r--r--', owner: 'root', content: '0.5.2-aurora' },
+          ],
+        },
+        {
+          name: 'devices',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
+            { name: 'cpu', type: 'directory', children: [], permissions: 'drwxr-xr-x', owner: 'root' },
+            { name: 'memory', type: 'directory', children: [], permissions: 'drwxr-xr-x', owner: 'root' },
+          ],
+        },
+      ],
+    },
+    // User binaries and applications
+    {
+      name: 'usr',
+      type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
+      children: [
+        {
+          name: 'bin',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
+            { name: 'nano', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# text editor' },
+            { name: 'vim', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# vi improved' },
+            { name: 'grep', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# search text patterns' },
+            { name: 'find', type: 'file', permissions: '-rwxr-xr-x', owner: 'root', content: '#!/bin/bash\n# search for files' },
+          ],
+        },
+        {
+          name: 'lib',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [],
+        },
+        {
+          name: 'share',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
             {
-              name: 'Pictures',
+              name: 'applications',
               type: 'directory',
+              permissions: 'drwxr-xr-x',
+              owner: 'root',
               children: [
-                { name: 'Vacation', type: 'directory', children: [] },
-                { name: 'Screenshots', type: 'directory', children: [] },
+                { name: 'Finder.desktop', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: '[Desktop Entry]\nName=Finder\nExec=finder\nType=Application' },
+                { name: 'Terminal.desktop', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: '[Desktop Entry]\nName=Terminal\nExec=terminal\nType=Application' },
+                { name: 'Settings.desktop', type: 'file', permissions: '-rw-r--r--', owner: 'root', content: '[Desktop Entry]\nName=Settings\nExec=settings\nType=Application' },
               ],
-            },
-            {
-              name: 'Music',
-              type: 'directory',
-              children: [
-                { name: 'Playlists', type: 'directory', children: [] },
-              ],
-            },
-            {
-              name: 'Desktop',
-              type: 'directory',
-              children: [],
             },
           ],
         },
       ],
     },
+    // Variable data files
     {
-      name: 'Applications',
+      name: 'var',
       type: 'directory',
+      permissions: 'drwxr-xr-x',
+      owner: 'root',
       children: [
-        { name: 'Finder.app', type: 'directory', children: [] },
-        { name: 'Terminal.app', type: 'directory', children: [] },
-        { name: 'Settings.app', type: 'directory', children: [] },
-      ],
-    },
-    {
-      name: 'System',
-      type: 'directory',
-      children: [
-        { name: 'Library', type: 'directory', children: [] },
+        {
+          name: 'log',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [
+            { name: 'system.log', type: 'file', permissions: '-rw-r-----', owner: 'root', content: `[${new Date().toISOString()}] System initialized\n[${new Date().toISOString()}] Aurora OS started` },
+            { name: 'auth.log', type: 'file', permissions: '-rw-r-----', owner: 'root', content: '' },
+          ],
+        },
+        {
+          name: 'tmp',
+          type: 'directory',
+          permissions: 'drwxrwxrwt',
+          owner: 'root',
+          children: [],
+        },
+        {
+          name: 'cache',
+          type: 'directory',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          children: [],
+        },
       ],
     },
   ],
@@ -119,14 +317,76 @@ const initialFileSystem: FileNode = {
 
 const FileSystemContext = createContext<FileSystemContextType | undefined>(undefined);
 
+// Load filesystem from localStorage or return initial
+function loadFileSystem(): FileNode {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load filesystem from storage:', e);
+  }
+  return deepCloneFileSystem(initialFileSystem);
+}
+
+// Save filesystem to localStorage
+function saveFileSystem(fs: FileNode): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fs));
+  } catch (e) {
+    console.warn('Failed to save filesystem to storage:', e);
+  }
+}
+
 export function FileSystemProvider({ children }: { children: ReactNode }) {
-  const [fileSystem, setFileSystem] = useState<FileNode>(initialFileSystem);
-  const [currentPath, setCurrentPath] = useState('/Users/guest');
+  const [fileSystem, setFileSystem] = useState<FileNode>(() => loadFileSystem());
+  const [currentUser] = useState('user'); // Default user - could be extended for login system
+  const homePath = currentUser === 'root' ? '/root' : `/home/${currentUser}`;
+  const [currentPath, setCurrentPath] = useState(homePath);
+
+  // Persist filesystem changes to localStorage
+  useEffect(() => {
+    saveFileSystem(fileSystem);
+  }, [fileSystem]);
+
+  // Resolve ~ and . and .. in paths
+  const resolvePath = useCallback((path: string): string => {
+    // Handle home shortcut
+    let resolved = path.replace(/^~/, homePath);
+
+    // Handle relative paths
+    if (!resolved.startsWith('/')) {
+      resolved = currentPath + '/' + resolved;
+    }
+
+    // Normalize path (handle . and ..)
+    const parts = resolved.split('/').filter(p => p && p !== '.');
+    const stack: string[] = [];
+
+    for (const part of parts) {
+      if (part === '..') {
+        stack.pop();
+      } else {
+        stack.push(part);
+      }
+    }
+
+    return '/' + stack.join('/');
+  }, [homePath, currentPath]);
+
+  // Reset filesystem to initial state
+  const resetFileSystem = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setFileSystem(deepCloneFileSystem(initialFileSystem));
+    setCurrentPath(homePath);
+  }, [homePath]);
 
   const getNodeAtPath = useCallback((path: string): FileNode | null => {
-    if (path === '/') return fileSystem;
+    const resolved = resolvePath(path);
+    if (resolved === '/') return fileSystem;
 
-    const parts = path.split('/').filter(p => p);
+    const parts = resolved.split('/').filter(p => p);
     let current: FileNode | null = fileSystem;
 
     for (const part of parts) {
@@ -137,7 +397,7 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     }
 
     return current;
-  }, [fileSystem]);
+  }, [fileSystem, resolvePath]);
 
   const listDirectory = useCallback((path: string): FileNode[] | null => {
     const node = getNodeAtPath(path);
@@ -152,9 +412,10 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
   }, [getNodeAtPath]);
 
   const deleteNode = useCallback((path: string): boolean => {
-    if (path === '/') return false;
+    const resolved = resolvePath(path);
+    if (resolved === '/') return false;
 
-    const parts = path.split('/').filter(p => p);
+    const parts = resolved.split('/').filter(p => p);
     const name = parts.pop();
     if (!name) return false;
 
@@ -176,21 +437,57 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     });
 
     return true;
-  }, []);
+  }, [resolvePath]);
 
-  const moveNode = useCallback((fromPath: string, _toPath: string): boolean => {
-    const node = getNodeAtPath(fromPath);
+  const moveNode = useCallback((fromPath: string, toPath: string): boolean => {
+    const resolvedFrom = resolvePath(fromPath);
+    const resolvedTo = resolvePath(toPath);
+
+    const node = getNodeAtPath(resolvedFrom);
     if (!node) return false;
 
-    const success = deleteNode(fromPath);
-    if (!success) return false;
+    // Clone the node to move
+    const nodeToMove = deepCloneFileNode(node);
 
-    // This is simplified - in reality would need to add to new location
+    // Delete from original location
+    const deleteSuccess = deleteNode(resolvedFrom);
+    if (!deleteSuccess) return false;
+
+    // Get parent directory of destination
+    const toParts = resolvedTo.split('/').filter(p => p);
+    const newName = toParts.pop();
+    const parentPath = '/' + toParts.join('/');
+
+    if (!newName) return false;
+
+    // Update name if moving to different location
+    nodeToMove.name = newName;
+
+    // Add to new location
+    setFileSystem(prevFS => {
+      const newFS = deepCloneFileSystem(prevFS);
+      const parts = parentPath.split('/').filter(p => p);
+      let current = newFS;
+
+      for (const part of parts) {
+        if (current.children) {
+          current = current.children.find(child => child.name === part)!;
+        }
+      }
+
+      if (current && current.children) {
+        current.children.push(nodeToMove);
+      }
+
+      return newFS;
+    });
+
     return true;
-  }, [getNodeAtPath, deleteNode]);
+  }, [getNodeAtPath, deleteNode, resolvePath]);
 
   const createFile = useCallback((path: string, name: string, content: string = ''): boolean => {
-    const node = getNodeAtPath(path);
+    const resolved = resolvePath(path);
+    const node = getNodeAtPath(resolved);
     if (!node || node.type !== 'directory') return false;
 
     const newFile: FileNode = {
@@ -199,11 +496,13 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
       content,
       size: content.length,
       modified: new Date(),
+      owner: currentUser,
+      permissions: '-rw-r--r--',
     };
 
     setFileSystem(prevFS => {
       const newFS = deepCloneFileSystem(prevFS);
-      const parts = path.split('/').filter(p => p);
+      const parts = resolved.split('/').filter(p => p);
       let current = newFS;
 
       for (const part of parts) {
@@ -219,10 +518,11 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     });
 
     return true;
-  }, [getNodeAtPath]);
+  }, [getNodeAtPath, resolvePath, currentUser]);
 
   const createDirectory = useCallback((path: string, name: string): boolean => {
-    const node = getNodeAtPath(path);
+    const resolved = resolvePath(path);
+    const node = getNodeAtPath(resolved);
     if (!node || node.type !== 'directory') return false;
 
     const newDir: FileNode = {
@@ -230,11 +530,13 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
       type: 'directory',
       children: [],
       modified: new Date(),
+      owner: currentUser,
+      permissions: 'drwxr-xr-x',
     };
 
     setFileSystem(prevFS => {
       const newFS = deepCloneFileSystem(prevFS);
-      const parts = path.split('/').filter(p => p);
+      const parts = resolved.split('/').filter(p => p);
       let current = newFS;
 
       for (const part of parts) {
@@ -251,12 +553,14 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     });
 
     return true;
-  }, [getNodeAtPath]);
+  }, [getNodeAtPath, resolvePath, currentUser]);
 
   const writeFile = useCallback((path: string, content: string): boolean => {
+    const resolved = resolvePath(path);
+
     setFileSystem(prevFS => {
       const newFS = deepCloneFileSystem(prevFS);
-      const parts = path.split('/').filter(p => p);
+      const parts = resolved.split('/').filter(p => p);
       let current = newFS;
 
       for (let i = 0; i < parts.length - 1; i++) {
@@ -278,7 +582,7 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
     });
 
     return true;
-  }, []);
+  }, [resolvePath]);
 
 
   return (
@@ -286,6 +590,8 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
       value={{
         fileSystem,
         currentPath,
+        currentUser,
+        homePath,
         setCurrentPath,
         getNodeAtPath,
         createFile,
@@ -295,6 +601,8 @@ export function FileSystemProvider({ children }: { children: ReactNode }) {
         readFile,
         listDirectory,
         moveNode,
+        resolvePath,
+        resetFileSystem,
       }}
     >
       {children}
@@ -309,3 +617,4 @@ export function useFileSystem() {
   }
   return context;
 }
+

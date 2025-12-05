@@ -76,13 +76,19 @@ function WindowComponent({
     ? { width: '100vw', height: 'calc(100vh - 28px)' }
     : { width: window.size.width, height: window.size.height };
 
+  // Calculate animation toward dock on the LEFT side of screen
+  // Dock is at left: 16px, width ~64px, so center is around 48px
+  const dockCenterX = 48;
+  const screenHeight = typeof globalThis !== 'undefined' ? globalThis.innerHeight || 900 : 900;
+  const dockCenterY = screenHeight / 2; // Dock is vertically centered
+
   return (
     <motion.div
       ref={windowRef}
       className={`absolute rounded-xl overflow-hidden border border-white/20 
         ${!disableShadows ? 'shadow-2xl' : ''} 
-        ${isDragging ? '' : 'transition-all'} 
-        ${!isFocused ? 'brightness-75 saturate-50' : ''}`}
+        ${isDragging ? '' : ''} 
+        ${!isFocused && !window.isMinimized ? 'brightness-75 saturate-50' : ''}`}
       style={{
         left: position.x,
         top: position.y,
@@ -91,21 +97,33 @@ function WindowComponent({
         zIndex: window.zIndex,
         // If not focused, force opaque background to disable transparency
         background: !isFocused ? '#171717' : undefined,
+        // Prevent interaction when minimized
+        pointerEvents: window.isMinimized ? 'none' : 'auto',
+        // Transform origin toward left center (dock area)
+        transformOrigin: 'center left',
       }}
       initial={{
         scale: reduceMotion ? 1 : 0.95,
-        opacity: reduceMotion ? 1 : 0
+        opacity: reduceMotion ? 1 : 0,
+        x: 0,
+        y: 0,
       }}
-      animate={{ scale: 1, opacity: 1 }}
+      animate={{
+        scale: window.isMinimized ? (reduceMotion ? 0 : 0.2) : 1,
+        opacity: window.isMinimized ? 0 : 1,
+        // Move toward dock center (left side)
+        x: window.isMinimized ? (reduceMotion ? 0 : dockCenterX - position.x) : 0,
+        y: window.isMinimized ? (reduceMotion ? 0 : dockCenterY - position.y - (window.size.height / 2)) : 0,
+      }}
       exit={{
         scale: reduceMotion ? 1 : 0.95,
         opacity: reduceMotion ? 1 : 0
       }}
       transition={{
-        duration: reduceMotion ? 0 : 0.15,
-        ease: "easeOut"
+        duration: reduceMotion ? 0 : 0.3,
+        ease: [0.32, 0.72, 0, 1], // macOS-like ease
       }}
-      onMouseDown={onFocus}
+      onMouseDown={window.isMinimized ? undefined : onFocus}
     >
 
       {/* Title Bar */}

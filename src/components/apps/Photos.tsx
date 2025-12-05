@@ -1,6 +1,6 @@
 import { AppTemplate } from './AppTemplate';
 import { Heart, Folder, Clock, MapPin, User, Image, Grid3x3, List } from 'lucide-react';
-import { useState } from 'react';
+import { useAppStorage } from '../../hooks/useAppStorage';
 
 const photosSidebar = {
   sections: [
@@ -31,6 +31,12 @@ const mockPhotos = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export function Photos() {
+  // Persisted state
+  const [appState, setAppState] = useAppStorage('photos', {
+    activeCategory: 'all',
+    viewMode: 'grid',
+  });
+
   const toolbar = (
     <div className="flex items-center justify-between w-full">
       <h2 className="text-white/90">All Photos</h2>
@@ -58,15 +64,13 @@ export function Photos() {
     </div>
   );
 
-  const [activeCategory, setActiveCategory] = useState('all');
-
   return (
     <AppTemplate
       sidebar={photosSidebar}
       toolbar={toolbar}
       content={content}
-      activeItem={activeCategory}
-      onItemClick={setActiveCategory}
+      activeItem={appState.activeCategory}
+      onItemClick={(id) => setAppState(s => ({ ...s, activeCategory: id }))}
     />
   );
 }

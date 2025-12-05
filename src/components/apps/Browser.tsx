@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, RotateCw, Home, Star, Lock, X } from 'lucide-react';
 import { useState } from 'react';
 import { AppTemplate } from './AppTemplate';
+import { useAppStorage } from '../../hooks/useAppStorage';
 
 const mockTabs = [
   { id: 1, title: 'Welcome to Browser', url: 'browser://welcome', active: true },
@@ -17,8 +18,13 @@ const quickLinks = [
 ];
 
 export function Browser() {
+  // Persisted state
+  const [appState, setAppState] = useAppStorage('browser', {
+    url: 'browser://welcome',
+    bookmarks: [] as string[],
+  });
+
   const [tabs] = useState(mockTabs);
-  const [url, setUrl] = useState('browser://welcome');
 
   const tabBar = (
     <div className="flex items-center w-full gap-1">
@@ -64,8 +70,8 @@ export function Browser() {
           <Lock className="w-3.5 h-3.5 text-white/50" />
           <input
             type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            value={appState.url}
+            onChange={(e) => setAppState(s => ({ ...s, url: e.target.value }))}
             className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-white/30"
           />
           <Star className="w-3.5 h-3.5 text-white/50 hover:text-white/80 cursor-pointer" />
