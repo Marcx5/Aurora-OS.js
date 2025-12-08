@@ -195,7 +195,7 @@ export function Terminal({ onLaunchApp }: TerminalProps) {
         const longFormat = args.includes('-l') || args.includes('-la') || args.includes('-al');
         const contents = listDirectory(lsPath);
         if (contents) {
-          let filteredContents = contents;
+          const filteredContents = contents;
           // User requested standard behavior: ls shows all files (like -a) by default
           // if (!showHidden) {
           //   filteredContents = contents.filter(node => !node.name.startsWith('.'));
