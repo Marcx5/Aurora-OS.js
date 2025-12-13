@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { notify } from '../lib/notifications';
+import { notify } from '../services/notifications';
 
 import {
   FileNode,

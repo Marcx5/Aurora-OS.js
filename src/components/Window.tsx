@@ -36,28 +36,47 @@ function WindowComponent({
   const width = window.isMaximized ? '100vw' : window.size.width;
   const height = window.isMaximized ? 'calc(100vh - 28px)' : window.size.height;
 
-  // If minimized, we want to animate out to the dock.
-  // Ideally, Rnd handles the "normal" state.
-  // For simplicity: We render Rnd always, but we control its style for minimization?
-  // Or we use Framer Motion to animate the Rnd wrapper?
+  // Calculate target position for minimize animation
+  const getMinimizeTarget = () => {
+    if (typeof document !== 'undefined') {
+      const dock = document.getElementById('dock-main');
+      if (dock) {
+        const rect = dock.getBoundingClientRect();
+        return {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      }
+    }
+    // Fallback
+    return {
+      x: 48,
+      y: typeof globalThis !== 'undefined' ? globalThis.innerHeight / 2 : 500
+    };
+  };
 
-  // Let's use a motion wrapper around the internal content to handle Opacity/Scale,
-  // while Rnd handles Position/Size.
-  // BUT: Minimize moves the window.
+  const minimizeTarget = window.isMinimized ? (() => {
+    const target = getMinimizeTarget();
+    // We need to center the window relative to the target point.
+    // Since we are not changing the width/height of the Rnd container (perf optimization),
+    // we must subtract half the window size from the target coordinates
+    // so that the center of the window aligns with the target.
+    const currentWidth = window.isMaximized ? (typeof globalThis !== 'undefined' ? globalThis.innerWidth : 1000) : window.size.width;
+    const currentHeight = window.isMaximized ? (typeof globalThis !== 'undefined' ? globalThis.innerHeight - 28 : 800) : window.size.height;
 
-  // Strategy: 
-  // Rnd is used for the window frame.
-  // If minimized, we override the style to force it to the dock position?
-  // Rnd allows 'position' and 'size' props.
-  // We can animate those props if we pass them as values.
-
-  // Actually, let's just use Rnd for the interactive state.
-  // When minimized, we can set `disableDragging` and `disableResizing` and change position.
+    return {
+      x: target.x - currentWidth / 2,
+      y: target.y - currentHeight / 2
+    };
+  })() : { x: 0, y: 0 };
 
   return (
     <Rnd
       size={{ width, height }}
-      position={{ x: window.isMinimized ? 48 : x, y: window.isMinimized ? 900 : y }}
+      position={{
+        x: window.isMinimized ? minimizeTarget.x : x,
+        y: window.isMinimized ? minimizeTarget.y : y
+      }}
       bounds={bounds}
       onDragStop={(_e, d) => {
         onUpdateState({ position: { x: d.x, y: d.y } });
@@ -71,8 +90,8 @@ function WindowComponent({
           position: position
         });
       }}
-      minWidth={300}
-      minHeight={200}
+      minWidth={window.isMinimized ? 0 : 300}
+      minHeight={window.isMinimized ? 0 : 200}
       dragHandleClassName="window-title-bar"
       disableDragging={window.isMaximized || window.isMinimized}
       enableResizing={!window.isMaximized && !window.isMinimized}
@@ -84,19 +103,22 @@ function WindowComponent({
         // Transition for smooth maximize/minimize if we want manual CSS transitions
         transition: window.isMaximized || window.isMinimized ? 'all 0.3s cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
         // Start minimized styles
-        opacity: window.isMinimized ? 0 : 1,
-        // transform: window.isMinimized ? 'scale(0.2)' : undefined, // Rnd might overwrite transform, be careful
         pointerEvents: window.isMinimized ? 'none' : 'auto',
       }}
-      className={cn(
-        "absolute rounded-xl overflow-hidden border border-white/20",
-        !disableShadows && "shadow-2xl",
-        (!isFocused && !window.isMinimized) && "brightness-75 saturate-50"
-      )}
+      className="absolute"
     >
       <div
-        className="w-full h-full flex flex-col overflow-hidden"
-        style={{ background: !isFocused ? '#171717' : undefined }}
+        className={cn(
+          "w-full h-full flex flex-col overflow-hidden transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "rounded-xl border border-white/20",
+          !disableShadows && "shadow-2xl",
+          (!isFocused && !window.isMinimized) && "brightness-75 saturate-50"
+        )}
+        style={{
+          background: !isFocused ? '#171717' : undefined,
+          opacity: window.isMinimized ? 0 : 1,
+          transform: window.isMinimized ? 'scale(0)' : 'scale(1)',
+        }}
       >
         {/* Title Bar */}
         <div

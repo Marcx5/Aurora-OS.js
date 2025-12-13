@@ -10,7 +10,7 @@
 export const STORAGE_KEYS = {
     // Soft memory keys (preferences, safe to forget)
     SETTINGS: 'aurora-os-settings',
-    DESKTOP_ICONS: 'aurora-os-desktop-icons',
+    DESKTOP_ICONS: 'aurora-os-desktop-positions',
     SOUND: 'aurora-os-sound-settings',
     APP_PREFIX: 'aurora-os-app-', // Pattern for app-specific storage
 

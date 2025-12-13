@@ -1,9 +1,11 @@
 import { AppTemplate } from './AppTemplate';
-import { MessageSquare, Users, Archive, Star, Send } from 'lucide-react';
+import { MessageSquare, Users, Archive, Star, Send, Search } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
 import { useAppStorage } from '../../hooks/useAppStorage';
+import { useElementSize } from '../../hooks/useElementSize';
 import { cn } from '../ui/utils';
+import { GlassInput } from '../ui/GlassInput';
 
 const messagesSidebar = {
   sections: [
@@ -61,14 +63,18 @@ export function Messages() {
   // Since AppTemplate expects a static structure for sidebar sections, we can keep the static definition
   // or make it dynamic if we want to show unread counts in the sidebar itself (not implemented in mock yet for categories)
 
+  // Responsive container measurement
+  const [containerRef, { width }] = useElementSize();
+  const showSidebar = width >= 450;
+
   const content = ({ contentWidth }: { contentWidth: number }) => {
     const isCompact = contentWidth < 400;
 
     // Calculate conversation list width - ensure it doesn't exceed available space
-    // When compact: 80px, otherwise up to 320px but max 30% of content width
+    // When compact: 80px, otherwise up to 320px but max 35% of content width (increased slightly)
     const conversationListWidth = isCompact
       ? 80
-      : Math.min(320, Math.floor(contentWidth * 0.3));
+      : Math.min(320, Math.floor(contentWidth * 0.35));
 
     return (
       <div className="flex h-full min-w-0">
@@ -76,15 +82,16 @@ export function Messages() {
         <div
           className={cn(
             "border-r border-white/10 overflow-y-auto flex flex-col shrink-0 transition-all duration-300",
-            isCompact && "items-center"
+            // Removing items-center allows children to stretch full width, better for touch targets
           )}
           style={{ width: `${conversationListWidth}px` }}
-        >          <div className={cn("p-3", isCompact && "flex justify-center")}>
+        >
+          <div className={cn("p-2", isCompact && "flex justify-center")}>
             {!isCompact ? (
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 text-sm"
+              <GlassInput
+                placeholder="Search..."
+                icon={<Search className="w-4 h-4" />}
+                className="bg-black/20"
               />
             ) : (
               <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
@@ -92,7 +99,7 @@ export function Messages() {
               </button>
             )}
           </div>
-          <div className="space-y-1 px-2 flex-1">
+          <div className="space-y-1 px-1 flex-1">
             {mockConversations.map((conversation) => (
               <button
                 key={conversation.id}
@@ -102,14 +109,15 @@ export function Messages() {
                   selectedConversationId === conversation.id ? 'bg-white/10' : 'hover:bg-white/5',
                   isCompact && "justify-center px-0"
                 )}
+                title={isCompact ? conversation.name : undefined}
               >
                 <div className="relative">
                   <div className={`w-12 h-12 rounded-full ${conversation.avatar} flex items-center justify-center text-white flex-shrink-0`}>
                     {conversation.name[0]}
                   </div>
-                  {isCompact && conversation.unread > 0 && (
+                  {conversation.unread > 0 && (
                     <span
-                      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] flex items-center justify-center text-white border-2 border-[#1e1e1e]" // Added border to separate from avatar
+                      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] flex items-center justify-center text-white border-2 border-[#1e1e1e]"
                       style={{ backgroundColor: accentColor }}
                     >
                       {conversation.unread}
@@ -124,14 +132,6 @@ export function Messages() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/60 text-xs truncate">{conversation.lastMessage}</span>
-                      {conversation.unread > 0 && (
-                        <span
-                          className="px-1.5 py-0.5 rounded-full text-xs text-white ml-2 flex-shrink-0"
-                          style={{ backgroundColor: accentColor }}
-                        >
-                          {conversation.unread}
-                        </span>
-                      )}
                     </div>
                   </div>
                 )}
@@ -143,38 +143,36 @@ export function Messages() {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Chat Header */}
-          <div className="h-14 border-b border-white/10 flex items-center px-4 shrink-0">
+          <div className="h-14 border-b border-white/10 flex items-center px-4 shrink-0 bg-white/5 backdrop-blur-md">
             <div className={`w-8 h-8 rounded-full ${selectedConversation.avatar} flex items-center justify-center text-white text-sm mr-3 shrink-0`}>
               {selectedConversation.name[0]}
             </div>
-            <span className="text-white truncate">{selectedConversation.name}</span>
+            <span className="text-white truncate font-medium">{selectedConversation.name}</span>
           </div>
 
           {/* Messages - Full Width List */}
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
             {mockMessages.map((message) => {
               const isMe = message.sender === 'me';
-
               return (
                 <div
                   key={message.id}
                   className="px-4 py-3 hover:bg-white/5 transition-colors min-w-0"
                 >
-                  {/* Message bubble with timestamp */}
-                  <div className="flex flex-col gap-1" style={{ alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                  <div className="flex flex-col gap-1 min-w-0" style={{ alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                     <div
-                      className="px-4 py-2 rounded-2xl max-w-[80%]"
+                      className="px-4 py-2 rounded-2xl max-w-[85%] break-words whitespace-pre-wrap"
                       style={{
                         backgroundColor: isMe ? accentColor : 'rgba(75, 85, 99, 0.4)',
                         color: 'white',
                         borderBottomRightRadius: isMe ? '4px' : '16px',
-                        borderBottomLeftRadius: isMe ? '16px' : '4px'
+                        borderBottomLeftRadius: isMe ? '16px' : '4px',
+                        wordBreak: 'break-word'
                       }}
                     >
-                      <p className="text-sm break-words">{message.text}</p>
+                      <p className="text-sm">{message.text}</p>
                     </div>
-                    {/* Timestamp below bubble */}
-                    <span className="text-xs text-white/40 px-1">{message.time}</span>
+                    <span className="text-[10px] text-white/40 px-1">{message.time}</span>
                   </div>
                 </div>
               );
@@ -182,20 +180,24 @@ export function Messages() {
           </div>
 
           {/* Message Input */}
-          <div className="h-16 border-t border-white/10 flex items-center px-4 gap-2">
-            <input
-              type="text"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 min-w-0 px-4 py-2 bg-gray-900/50 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
-            />
-            <button
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-all hover:opacity-90 flex-shrink-0"
-              style={{ backgroundColor: accentColor }}
-            >
-              <Send className="w-5 h-5" />
-            </button>
+          <div className="p-2 border-t border-white/10 shrink-0 bg-white/5 backdrop-blur-md">
+            <div className="flex items-center gap-1">
+              <div className="flex-1 min-w-0">
+                <GlassInput
+                  type="text"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Type..."
+                  className="rounded-full py-2.5 h-10"
+                />
+              </div>
+              <button
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all hover:opacity-90 flex-shrink-0 shadow-lg"
+                style={{ backgroundColor: accentColor }}
+              >
+                <Send className="w-4 h-4 ml-0.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -203,13 +205,15 @@ export function Messages() {
   };
 
   return (
-    <AppTemplate
-      sidebar={messagesSidebar}
-      content={content}
-      hasSidebar={true}
-      activeItem={appState.activeCategory}
-      onItemClick={(id) => setAppState(s => ({ ...s, activeCategory: id }))}
-      minContentWidth={500}
-    />
+    <div ref={containerRef} className="h-full w-full">
+      <AppTemplate
+        sidebar={messagesSidebar}
+        content={content}
+        hasSidebar={showSidebar}
+        activeItem={appState.activeCategory}
+        onItemClick={(id) => setAppState(s => ({ ...s, activeCategory: id }))}
+        minContentWidth={0} // Allow full collapse
+      />
+    </div>
   );
 }

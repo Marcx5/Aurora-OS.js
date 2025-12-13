@@ -55,24 +55,16 @@ npm test
 
 ## Release Notes
 
-## v0.7.0
-- **DEV Center**: New specialized application for developers.
-    - **Dashboard**: Central hub for developer tools.
-    - **UI & Sounds**: Manual triggers for system notifications and sound events (click, hover, etc.).
-    - **Storage Inspector**: View and manage Soft (Preferences) vs Hard (Filesystem) memory, with key deletion.
-    - **File System Debugger**: View raw filesystem JSON and reset functionality.
-    - **Integration**: "Developer Mode" toggle in System Settings > About.
-- **Audio Architecture**:
-    - **SoundManager**: Refactored core audio engine with volume grouping (Master, System, UI, Feedback).
-    - **Audio Applet**: New native-style popup in MenuBar for granular volume control.
-    - **Persistence**: Audio settings are now saved to localStorage.
-- **Dock & Trash**:
-    - **Trash App**: Fully functional Trash with dynamic icon (empty/full) in Dock and Finder.
-    - **Dock Enhancements**: Added horizontal separator before utility apps (Terminal, Trash).
-    - **Animations**: Snappier hover effects for Dock items.
-- **System**:
-    - **Refactoring**: Unified "Applet" architecture (Notification Center & Audio) using `shadcn/ui` Popover.
-    - **Testing**: Enhanced test suite to cover new components and logic.
+## v0.7.1
+- **UI Standardization**:
+    - **Glassmorphism**: Created standardized `GlassButton` and `GlassInput` components.
+    - **Adoption**: Integrated new glass UI into **DevCenter**, **Messages**, and **Settings** (Danger Zone, Custom Color).
+- **Architecture**:
+    - **Service Separation**: Extracted `SoundManager`, `SoundFeedback`, and `NotificationSystem` from `src/lib` to `src/services` to clearly distinguish stateful services from stateless utilities.
+    - **Cleanup**: Deleted legacy `src/lib` directory.
+- **Bug Fixes**:
+    - **Responsive Layouts**: Fixed sidebar cropping in Messages and grid overflow in Settings/DevCenter at narrow widths (<400px).
+    - **Linting**: resolved unused variables in MenuBar and DevCenter.
 
 [View full version history](HISTORY.md)
 

@@ -5,6 +5,15 @@ import { cn } from './ui/utils';
 import { useAppContext } from './AppContext';
 import { AudioApplet } from './AudioApplet';
 import { NotificationCenter } from './NotificationCenter';
+import {
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  MenubarItem,
+  MenubarSeparator,
+  MenubarShortcut,
+} from './ui/menubar';
 
 interface MenuBarProps {
   focusedApp?: string | null;
@@ -24,13 +33,14 @@ const appMenus: Record<string, { name: string; menus: string[] }> = {
   calendar: { name: 'Calendar', menus: ['File', 'Edit', 'View', 'Window', 'Help'] },
   notes: { name: 'Notes', menus: ['File', 'Edit', 'Format', 'View', 'Window', 'Help'] },
   mail: { name: 'Mail', menus: ['File', 'Edit', 'View', 'Mailbox', 'Message', 'Window', 'Help'] },
+  'dev-center': { name: 'DevCenter', menus: ['File', 'Edit', 'View', 'Window', 'Help'] },
 };
 
 const defaultMenus = { name: 'Finder', menus: ['File', 'Edit', 'View', 'Go', 'Window', 'Help'] };
 
 function MenuBarComponent({ focusedApp, onOpenApp }: MenuBarProps) {
-  const { menuBarBackground, blurStyle } = useThemeColors();
-  const { devMode } = useAppContext();
+  const { menuBarBackground, blurStyle, getBackgroundColor } = useThemeColors();
+  const { devMode, disableShadows } = useAppContext();
   const [currentTime, setCurrentTime] = useState(() =>
     new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -70,51 +80,159 @@ function MenuBarComponent({ focusedApp, onOpenApp }: MenuBarProps) {
   // Get the menu config for the focused app
   const appConfig = focusedApp ? appMenus[focusedApp] || defaultMenus : defaultMenus;
 
-  // Inject "DEV Center" if devMode is on and app is Finder (or default)
-  const menus = (appConfig.name === 'Finder' && devMode)
-    ? [...appConfig.menus, 'DEV Center']
+  // Add "DEV Center" to Finder menus if devMode is enabled
+  const menuLabels = (appConfig.name === 'Finder' && devMode)
+    ? [...appConfig.menus, 'DEV Center'] // Keep existing logic for top-level item if needed, though usually this is an app, not a top-level menu
     : appConfig.menus;
+
+  // Render dummy menu content for now, can be expanded to be real later
+  const renderMenuContent = (menuName: string) => {
+    switch (menuName) {
+      case 'File':
+        return (
+          <>
+            <MenubarItem>New Window <MenubarShortcut>⌘N</MenubarShortcut></MenubarItem>
+            <MenubarItem>Open... <MenubarShortcut>⌘O</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem>Close Window <MenubarShortcut>⌘W</MenubarShortcut></MenubarItem>
+          </>
+        );
+      case 'Edit':
+        return (
+          <>
+            <MenubarItem>Undo <MenubarShortcut>⌘Z</MenubarShortcut></MenubarItem>
+            <MenubarItem>Redo <MenubarShortcut>⇧⌘Z</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem>Cut <MenubarShortcut>⌘X</MenubarShortcut></MenubarItem>
+            <MenubarItem>Copy <MenubarShortcut>⌘C</MenubarShortcut></MenubarItem>
+            <MenubarItem>Paste <MenubarShortcut>⌘V</MenubarShortcut></MenubarItem>
+            <MenubarItem>Select All <MenubarShortcut>⌘A</MenubarShortcut></MenubarItem>
+          </>
+        );
+      case 'View':
+        return (
+          <>
+            <MenubarItem>Reload <MenubarShortcut>⌘R</MenubarShortcut></MenubarItem>
+            <MenubarItem>Toggle Fullscreen <MenubarShortcut>F11</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem>Actual Size <MenubarShortcut>⌘0</MenubarShortcut></MenubarItem>
+            <MenubarItem>Zoom In <MenubarShortcut>⌘+</MenubarShortcut></MenubarItem>
+            <MenubarItem>Zoom Out <MenubarShortcut>⌘-</MenubarShortcut></MenubarItem>
+          </>
+        );
+      case 'Window':
+        return (
+          <>
+            <MenubarItem>Minimize <MenubarShortcut>⌘M</MenubarShortcut></MenubarItem>
+            <MenubarItem>Zoom</MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem>Bring All to Front</MenubarItem>
+          </>
+        );
+      case 'Help':
+        return (
+          <>
+            <MenubarItem>{appConfig.name} Help</MenubarItem>
+          </>
+        );
+      default:
+        return (
+          <MenubarItem>Feature not implemented</MenubarItem>
+        );
+    }
+  };
+
 
   return (
     <div
-      className={cn("absolute top-0 left-0 right-0 h-7 border-b border-white/10 flex items-center justify-between px-4 z-[9999]")}
+      className={cn("absolute top-0 left-0 right-0 h-7 border-b border-white/10 flex items-center justify-between px-2 z-[9999]")}
       style={{ background: menuBarBackground, ...blurStyle }}
     >
       {/* Left side */}
-      <div className="flex items-center gap-6">
-        <Apple className="w-4 h-4 text-white" />
-        <div className="flex items-center gap-4 text-white/70 text-xs">
-          <button className="font-semibold text-white hover:text-white/80 transition-colors">
-            {appConfig.name}
-          </button>
-          {menus.map((menu) => (
-            <button
-              key={menu}
-              className="hover:text-white transition-colors"
-              onClick={() => {
-                if (menu === 'DEV Center') {
-                  onOpenApp?.('dev-center');
-                }
-              }}
+      <div className="flex items-center gap-1">
+        <Menubar className="border-none bg-transparent h-7 p-0 space-x-0 shadow-none gap-4">
+          <MenubarMenu>
+            <MenubarTrigger className="px-0 w-8 justify-center data-[state=open]:bg-white/10 data-[state=open]:text-white focus:bg-white/10 focus:text-white rounded-md h-7 items-center flex">
+              <Apple className="w-4 h-4 fill-current" />
+            </MenubarTrigger>
+            <MenubarContent
+              className={cn("border-white/10 text-white min-w-[14rem] p-1 z-[10000]", !disableShadows ? "shadow-xl" : "shadow-none")}
+              style={{ background: getBackgroundColor(0.8), ...blurStyle }}
             >
-              {menu}
-            </button>
+              <MenubarItem>About This Mac</MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>System Settings...</MenubarItem>
+              <MenubarItem>App Store...</MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Recent Items</MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Force Quit... <MenubarShortcut>⌥⌘⎋</MenubarShortcut></MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Sleep</MenubarItem>
+              <MenubarItem>Restart...</MenubarItem>
+              <MenubarItem>Shut Down...</MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Lock Screen <MenubarShortcut>⌃⌘Q</MenubarShortcut></MenubarItem>
+              <MenubarItem>Log Out User... <MenubarShortcut>⇧⌘Q</MenubarShortcut></MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+
+          <MenubarMenu>
+            <MenubarTrigger className="font-semibold text-xs px-0 data-[state=open]:text-white focus:text-white rounded-sm h-7 items-center flex transition-colors hover:text-white/80">
+              {appConfig.name}
+            </MenubarTrigger>
+            <MenubarContent
+              className={cn("border-white/10 text-white min-w-[14rem] p-1 z-[10000]", !disableShadows ? "shadow-xl" : "shadow-none")}
+              style={{ background: getBackgroundColor(0.8), ...blurStyle }}
+            >
+              <MenubarItem>About {appConfig.name}</MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Settings... <MenubarShortcut>⌘,</MenubarShortcut></MenubarItem>
+              <MenubarSeparator className="bg-white/10" />
+              <MenubarItem>Quit {appConfig.name} <MenubarShortcut>⌘Q</MenubarShortcut></MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+
+          {menuLabels.map((menu) => (
+            <MenubarMenu key={menu}>
+              <MenubarTrigger
+                className={cn(
+                  "px-0 text-xs h-7 items-center flex transition-colors rounded-sm",
+                  "text-white/70 hover:text-white data-[state=open]:text-white focus:text-white"
+                )}
+                onClick={() => {
+                  if (menu === 'DEV Center') {
+                    onOpenApp?.('dev-center');
+                  }
+                }}
+              >
+                {menu}
+              </MenubarTrigger>
+              {menu !== 'DEV Center' && (
+                <MenubarContent
+                  className={cn("border-white/10 text-white min-w-[12rem] p-1 z-[10000]", !disableShadows ? "shadow-xl" : "shadow-none")}
+                  style={{ background: getBackgroundColor(0.8), ...blurStyle }}
+                >
+                  {renderMenuContent(menu)}
+                </MenubarContent>
+              )}
+            </MenubarMenu>
           ))}
-        </div>
+        </Menubar>
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-4">
-        <button className="text-white/70 hover:text-white transition-colors">
+      <div className="flex items-center gap-4 px-2">
+        <button className="text-white/90 hover:text-white transition-colors">
           <Battery className="w-4 h-4" />
         </button>
-        <button className="text-white/70 hover:text-white transition-colors">
+        <button className="text-white/90 hover:text-white transition-colors">
           <Wifi className="w-4 h-4" />
         </button>
         <AudioApplet />
         <NotificationCenter />
 
-        <div className="text-white/80 text-xs flex items-center gap-2">
+        <div className="text-white/90 text-xs font-medium flex items-center gap-2">
           <span>{currentDate}</span>
           <span>{currentTime}</span>
         </div>
