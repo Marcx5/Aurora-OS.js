@@ -1,17 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DevCenter } from './DevCenter';
-import { notify } from '../../lib/notifications';
-import { feedback } from '../../lib/soundFeedback';
+import { notify } from '../../services/notifications';
+import { feedback } from '../../services/soundFeedback';
 
 // Mock dependencies
-vi.mock('../../lib/notifications', () => ({
+vi.mock('../../services/notifications', () => ({
     notify: {
         system: vi.fn(),
     },
 }));
 
-vi.mock('../../lib/soundFeedback', () => ({
+vi.mock('../../services/soundFeedback', () => ({
     feedback: {
         click: vi.fn(),
         hover: vi.fn(),

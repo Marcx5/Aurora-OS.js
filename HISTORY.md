@@ -1,5 +1,16 @@
 # Version History
 
+## v0.7.1
+- **UI Standardization**:
+    - **Glassmorphism**: Created standardized `GlassButton` and `GlassInput` components.
+    - **Adoption**: Integrated new glass UI into **DevCenter**, **Messages**, and **Settings** (Danger Zone, Custom Color).
+- **Architecture**:
+    - **Service Separation**: Extracted `SoundManager`, `SoundFeedback`, and `NotificationSystem` from `src/lib` to `src/services` to clearly distinguish stateful services from stateless utilities.
+    - **Cleanup**: Deleted legacy `src/lib` directory.
+- **Bug Fixes**:
+    - **Responsive Layouts**: Fixed sidebar cropping in Messages and grid overflow in Settings/DevCenter at narrow widths (<400px).
+    - **Linting**: resolved unused variables in MenuBar and DevCenter.
+
 ## v0.7.0
 - **DEV Center**: New specialized application for developers.
     - **Dashboard**: Central hub for developer tools.

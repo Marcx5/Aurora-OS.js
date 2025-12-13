@@ -17,8 +17,8 @@ import { AppProvider } from './components/AppContext';
 import { FileSystemProvider, useFileSystem, type FileSystemContextType } from './components/FileSystemContext';
 import { Toaster } from './components/ui/sonner';
 import { getGridConfig, gridToPixel, pixelToGrid, findNextFreeCell, gridPosToKey, rearrangeGrid, type GridPosition } from './utils/gridSystem';
-import { notify } from './lib/notifications';
-import { feedback } from './lib/soundFeedback';
+import { notify } from './services/notifications';
+import { feedback } from './services/soundFeedback';
 
 export interface WindowState {
   id: string;
@@ -156,6 +156,29 @@ function OS() {
       }, 0);
     }
   }, [newPositions]);
+
+  // Cleanup orphaned positions (when files are deleted/moved externally)
+  useEffect(() => {
+    const activeIds = new Set(desktopIcons.map(icon => icon.id));
+    const currentPositionIds = Object.keys(iconGridPositions);
+    const orphans = currentPositionIds.filter(id => !activeIds.has(id));
+
+    if (orphans.length > 0) {
+      setTimeout(() => {
+        setIconGridPositions(prev => {
+          const next = { ...prev };
+          let hasChanges = false;
+          orphans.forEach(id => {
+            if (next[id]) {
+              delete next[id];
+              hasChanges = true;
+            }
+          });
+          return hasChanges ? next : prev;
+        });
+      }, 0);
+    }
+  }, [desktopIcons, iconGridPositions]);
 
   const openWindowRef = useRef<(type: string, data?: { path?: string }) => void>(() => { });
 

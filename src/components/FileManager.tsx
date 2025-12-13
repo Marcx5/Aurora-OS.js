@@ -27,7 +27,7 @@ import { useAppStorage } from '../hooks/useAppStorage';
 import { useElementSize } from '../hooks/useElementSize';
 import { FileIcon } from './ui/FileIcon';
 import { cn } from './ui/utils';
-import { feedback } from '../lib/soundFeedback';
+import { feedback } from '../services/soundFeedback';
 
 interface BreadcrumbPillProps {
   name: string;

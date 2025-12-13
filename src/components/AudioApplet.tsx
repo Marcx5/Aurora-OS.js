@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Volume2, VolumeX, MousePointer2, Bell, AppWindow } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Slider } from './ui/slider';
-import { soundManager, type SoundCategory } from '../lib/sound';
+import { soundManager, type SoundCategory } from '../services/sound';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAppContext } from './AppContext';
 
@@ -33,7 +33,7 @@ function useAudioMixer() {
 
 export function AudioApplet() {
     const { master, system, ui, feedback, isMuted } = useAudioMixer();
-    const { notificationBackground, blurStyle } = useThemeColors();
+    const { blurStyle, getBackgroundColor } = useThemeColors();
     const { disableShadows, accentColor, reduceMotion } = useAppContext();
     const [isOpen, setIsOpen] = useState(false);
 
@@ -63,9 +63,9 @@ export function AudioApplet() {
             </PopoverTrigger>
 
             <PopoverContent
-                className={`w-80 p-0 overflow-hidden border-white/20 rounded-2xl ${!disableShadows ? 'shadow-2xl' : ''} ${reduceMotion ? '!animate-none !duration-0' : ''}`}
+                className={`w-80 p-0 overflow-hidden border-white/20 rounded-2xl ${!disableShadows ? 'shadow-2xl' : 'shadow-none'} ${reduceMotion ? '!animate-none !duration-0' : ''}`}
                 style={{
-                    background: notificationBackground,
+                    background: getBackgroundColor(0.8),
                     ...blurStyle,
                     '--accent-user-override': accentColor
                 } as React.CSSProperties}

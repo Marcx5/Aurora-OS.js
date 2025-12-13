@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "ESNext",
         "target": "es2020",
         "outDir": "dist-electron",
         "rootDir": "electron",
@@ -9,7 +9,7 @@
             "node"
         ],
         "esModuleInterop": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "skipLibCheck": true
     },
     "include": [

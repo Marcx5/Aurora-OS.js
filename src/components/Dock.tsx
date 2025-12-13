@@ -30,7 +30,7 @@ const dockApps = [
 
 function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: DockProps) {
   const { dockBackground, blurStyle } = useThemeColors();
-  const { reduceMotion, disableShadows, disableGradients, accentColor } = useAppContext();
+  const { reduceMotion, disableShadows, disableGradients, accentColor, devMode } = useAppContext();
   const { getNodeAtPath, homePath } = useFileSystem();
 
   const trashNode = getNodeAtPath(`${homePath}/.Trash`);
@@ -38,6 +38,18 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [shouldHide, setShouldHide] = useState(false);
+
+  // Filter apps based on settings
+  const visibleApps = useMemo(() => {
+    const apps = [...dockApps];
+    if (devMode) {
+      // Insert DevCenter before Settings
+      apps.splice(apps.length - 1, 0, {
+        id: 'dev-center', icon: Terminal, label: 'DevCenter', color: 'from-purple-500 to-purple-600', solid: '#9333ea'
+      });
+    }
+    return apps;
+  }, [devMode]);
 
   // Group windows by app type
   const windowsByApp = useMemo(() => {
@@ -133,6 +145,7 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[9998]">
       <motion.div
+        id="dock-main"
         className={cn(
           "rounded-2xl p-2 border border-white/20",
           !disableShadows && "shadow-2xl"
@@ -147,7 +160,7 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
       >
         <div className="flex flex-col gap-2">
           {/* App Icons */}
-          {dockApps.map((app, index) => {
+          {visibleApps.map((app, index) => {
             const appWindows = windowsByApp[app.id] || [];
             const hasWindows = appWindows.length > 0;
             const windowCount = appWindows.length;
@@ -240,7 +253,7 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
               !disableGradients && "bg-gradient-to-br from-gray-700 to-gray-900"
             )}
             style={disableGradients ? { backgroundColor: '#374151' } : {}}
-            onMouseEnter={() => setHoveredIndex(dockApps.length)}
+            onMouseEnter={() => setHoveredIndex(visibleApps.length)}
             onMouseLeave={() => setHoveredIndex(null)}
             onClick={() => {
               // Open Finder at .Trash
@@ -251,7 +264,7 @@ function DockComponent({ onOpenApp, onRestoreWindow, onFocusWindow, windows }: D
           >
             {isTrashEmpty ? <Trash className="w-6 h-6" /> : <Trash2 className="w-6 h-6" />}
 
-            {hoveredIndex === dockApps.length && (
+            {hoveredIndex === visibleApps.length && (
               <motion.div
                 className="absolute left-full ml-3 px-3 py-1.5 bg-gray-900/90 backdrop-blur-md text-white text-xs rounded-lg whitespace-nowrap border border-white/20"
                 initial={{ opacity: 0, x: -10 }}

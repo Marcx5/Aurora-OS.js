@@ -42,7 +42,7 @@ const notifications = [
 
 export function NotificationCenter() {
   const { accentColor, reduceMotion, disableShadows } = useAppContext();
-  const { notificationBackground, blurStyle } = useThemeColors();
+  const { blurStyle, getBackgroundColor } = useThemeColors();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -56,8 +56,8 @@ export function NotificationCenter() {
       </PopoverTrigger>
 
       <PopoverContent
-        className={`w-96 p-0 overflow-hidden border-white/20 rounded-2xl ${!disableShadows ? 'shadow-2xl' : ''} ${reduceMotion ? '!animate-none !duration-0' : ''}`}
-        style={{ background: notificationBackground, ...blurStyle }}
+        className={`w-96 p-0 overflow-hidden border-white/20 rounded-2xl ${!disableShadows ? 'shadow-2xl' : 'shadow-none'} ${reduceMotion ? '!animate-none !duration-0' : ''}`}
+        style={{ background: getBackgroundColor(0.8), ...blurStyle }}
         align="end"
         sideOffset={12}
       >

@@ -47,10 +47,10 @@ interface VolumeState {
 }
 
 const DEFAULT_VOLUMES: VolumeState = {
-    master: 1,
+    master: 0.75,
     system: 1,
-    ui: 0.75,
-    feedback: 0.5,
+    ui: 0.5,
+    feedback: 0.25,
 };
 
 const STORAGE_KEY = STORAGE_KEYS.SOUND;
