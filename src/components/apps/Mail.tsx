@@ -433,19 +433,27 @@ export function Mail({ owner }: { owner?: string }) {
                   )}
                   title={isCompact ? email.subject : undefined}
                 >
-                  <button
-                    onClick={(e) => handleToggleStar(email.id, e)}
-                    className="mt-1 shrink-0"
-                  >
-                    <Star
-                      className={cn(
-                        "w-4 h-4 transition-colors",
-                        email.starred
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-white/30 hover:text-white/60"
-                      )}
-                    />
-                  </button>
+                  <div className="relative mt-1 shrink-0">
+                    <button
+                      onClick={(e) => handleToggleStar(email.id, e)}
+                      className="transition-transform active:scale-95"
+                    >
+                      <Star
+                        className={cn(
+                          "w-4 h-4 transition-colors",
+                          email.starred
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-white/30 hover:text-white/60"
+                        )}
+                      />
+                    </button>
+                    {isCompact && !email.read && (
+                      <div
+                        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-[#1E1E1E] pointer-events-none"
+                        style={{ backgroundColor: accentColor }}
+                      />
+                    )}
+                  </div>
 
                   {!isCompact && (
                     <div className="flex-1 min-w-0">
@@ -483,13 +491,6 @@ export function Mail({ owner }: { owner?: string }) {
                         {email.body.replace(/<[^>]*>/g, "").substring(0, 60)}...
                       </div>
                     </div>
-                  )}
-
-                  {isCompact && !email.read && (
-                    <div
-                      className="w-2 h-2 rounded-full shrink-0 mt-1"
-                      style={{ backgroundColor: accentColor }}
-                    />
                   )}
                 </button>
               ))
